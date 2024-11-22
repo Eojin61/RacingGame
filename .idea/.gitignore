@@ -1,3 +1,6 @@
 # Default ignored files
 /shelf/
 /workspace.xml
+
+# 소스 코드 포함
+!src/** # src 폴더와 그 하위 파일은 무시하지 않음
