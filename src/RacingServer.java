@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
@@ -7,8 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RacingServer {
-    private static final int PORT = 30000; // 서버 포트 번호
+public class RacingServer extends JFrame {
+    private int port;
+    private ServerSocket serverSocket = null;
+
+    private Thread acceptThread = null;
+
     private static final int PLAYER_COUNT = 2; // 최대 플레이어 수
     private List<ClientHandler> clients = new ArrayList<>(); // 연결된 클라이언트 핸들러 리스트
     private Map<Socket, String> playerNames = new HashMap<>(); // 소켓별 플레이어 이름 매핑
@@ -16,51 +22,123 @@ public class RacingServer {
     private Map<Socket, Long> endTimes = new HashMap<>(); // 플레이어별 게임 종료 시간 기록
     private JTextArea serverLog; // 서버 로그를 출력할 UI 컴포넌트
 
-    public static void main(String[] args) {
-        new RacingServer().start();
+    private JTextArea t_display;
+    private JButton b_connect, b_disconnect, b_exit;
+
+    public RacingServer(int port) {
+        super("Racing Server");
+
+        buildGUI();
+
+        setSize(400, 300);
+        setLocation(400, 0);
+
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        setVisible(true);
+
+        this.port = port;
     }
 
-    public void start() {
-        setupUI(); // 서버 로그 UI 구성
+    private void buildGUI() {
+        add(createDisplayPanel(), BorderLayout.CENTER);
 
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            logMessage("Racing Server is waiting for players...");
+        add(createControlPanel(), BorderLayout.SOUTH);
+    }
+
+    private JPanel createDisplayPanel() {
+        JPanel p = new JPanel(new BorderLayout());
+
+        t_display = new JTextArea();
+        t_display.setEditable(false);
+
+        p.add(new JScrollPane(t_display), BorderLayout.CENTER);
+
+        return p;
+    }
+
+    private JPanel createControlPanel() {
+        JPanel p = new JPanel(new GridLayout(1, 3));
+
+        b_connect = new JButton("서버 시작");
+        b_connect.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                acceptThread = new Thread(() -> startServer());
+                acceptThread.start();
+
+                b_connect.setEnabled(false);
+                b_disconnect.setEnabled(true);
+                b_exit.setEnabled(false);
+            }
+
+        });
+
+        b_disconnect = new JButton("서버 종료");
+        b_disconnect.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                disconnect();
+
+                b_connect.setEnabled(true);
+                b_disconnect.setEnabled(false);
+                b_exit.setEnabled(true);
+            }
+
+        });
+
+        b_exit = new JButton("종료");
+        b_exit.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(-1);
+            }
+
+        });
+
+        p.add(b_connect);
+        p.add(b_disconnect);
+        p.add(b_exit);
+
+        b_disconnect.setEnabled(false);
+
+        return p;
+    }
+
+    private void disconnect() {
+        try {
+            acceptThread = null;
+            serverSocket.close();
+        } catch (IOException e) {
+            System.err.println("클라이언트 닫기 오류> " + e.getMessage());
+            System.exit(-1);
+        }
+    }
+
+    public void startServer() {
+        Socket clientSocket = null;
+
+        try {
+            serverSocket = new ServerSocket(port);
+            printDisplay("서버가 시작되었습니다. Player의 접속을 기다리고 있습니다...");
 
             while (clients.size() < PLAYER_COUNT) {
-                // 새로운 클라이언트 접속 대기
                 Socket socket = serverSocket.accept();
                 ClientHandler clientHandler = new ClientHandler(socket, this, clients.size() + 1);
                 clients.add(clientHandler); // 클라이언트를 리스트에 추가
                 new Thread(clientHandler).start(); // 클라이언트 핸들러 실행
-                logMessage("Player connected: Current count = " + clients.size());
+                printDisplay("현재 접속한 플레이어 수 = " + clients.size());
             }
 
-            logMessage("All players connected. Waiting for the game to start...");
+            printDisplay("모든 플레이어가 접속하였습니다. 게임이 시작되길 기다립니다...");
         } catch (IOException e) {
-            logMessage("Error: " + e.getMessage());
-            e.printStackTrace();
+            printDisplay("오류: " + e.getMessage());
         }
     }
 
-    private void setupUI() {
-        // 서버 로그를 표시할 GUI 구성
-        JFrame frame = new JFrame("Racing Server");
-        serverLog = new JTextArea();
-        serverLog.setEditable(false);
-
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout());
-        panel.add(new JScrollPane(serverLog), BorderLayout.CENTER);
-
-        frame.add(panel);
-        frame.setSize(400, 300);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-    }
-
-    public synchronized void logMessage(String message) {
-        // 서버 로그에 메시지 추가
-        serverLog.append(message + "\n");
+    public synchronized void printDisplay(String msg) {
+        t_display.append(msg + "\n");
+        t_display.setCaretPosition(t_display.getDocument().getLength());
     }
 
     public synchronized void broadcast(String message) {
@@ -68,19 +146,19 @@ public class RacingServer {
         for (ClientHandler client : clients) {
             client.sendMessage(message);
         }
-        logMessage("Broadcast: " + message);
+        printDisplay("Broadcast: " + message);
     }
 
     public synchronized void recordStartTime(Socket socket) {
         // 게임 시작 시간을 기록
         startTimes.put(socket, System.currentTimeMillis());
-        logMessage("Game started for: " + playerNames.get(socket));
+        printDisplay("Game started for: " + playerNames.get(socket));
     }
 
     public synchronized void recordEndTime(Socket socket) {
         // 게임 종료 시간을 기록
         endTimes.put(socket, System.currentTimeMillis());
-        logMessage("Game ended for: " + playerNames.get(socket));
+        printDisplay("Game ended for: " + playerNames.get(socket));
 
         // 모든 플레이어가 종료되었는지 확인
         if (endTimes.size() == PLAYER_COUNT) {
@@ -114,7 +192,7 @@ public class RacingServer {
         // 결과를 모든 클라이언트에 전송
         String finalResults = results.toString();
         broadcast(finalResults); // 결과 메시지 브로드캐스트
-        logMessage(finalResults); // 서버 로그에 결과 출력
+        printDisplay(finalResults); // 서버 로그에 결과 출력
     }
 
     class ClientHandler implements Runnable {
@@ -144,7 +222,7 @@ public class RacingServer {
                 out.println("ENTER_NAME");
                 String playerName = in.readLine();
                 server.playerNames.put(socket, playerName); // 플레이어 이름 저장
-                server.logMessage("Player name received: " + playerName);
+                server.printDisplay("Player name received: " + playerName);
 
                 String message;
                 while ((message = in.readLine()) != null) {
@@ -159,7 +237,7 @@ public class RacingServer {
                     }
                 }
             } catch (IOException e) {
-                server.logMessage("Error: " + e.getMessage());
+                server.printDisplay("Error: " + e.getMessage());
                 e.printStackTrace();
             } finally {
                 try {
@@ -172,8 +250,14 @@ public class RacingServer {
             }
         }
 
-        public void sendMessage(String message) {
-            out.println(message); // 클라이언트로 메시지 전송
+        public void sendMessage(String msg) {
+            out.println(msg); // 클라이언트로 메시지 전송
         }
+    }
+
+    public static void main(String[] args) {
+        int port = 54321;
+
+        RacingServer server = new RacingServer(port);
     }
 }
