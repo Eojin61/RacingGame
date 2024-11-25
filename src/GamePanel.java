@@ -79,7 +79,11 @@ public class GamePanel extends JPanel {
     }
 
     private void loadCarImage(String carImageName) {
-        carImage = new ImageIcon("src/image/" + carImageName).getImage();
+        try {
+            carImage = new ImageIcon(getClass().getResource("/image/" + carImageName)).getImage();
+        } catch (Exception e) {
+            System.err.println("이미지를 로드할 수 없습니다: " + carImageName);
+        }
     }
 
     private void generateObstacles() {
