@@ -186,14 +186,6 @@ public class RacingClient extends JFrame {
         gameFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         gameFrame.setVisible(true);
 
-        // 게임 시작
-        gamePanel.startGame();
-
-        // 서버에 START 메시지 전송
-        if (out != null) {
-            out.println("START");
-            printDisplay("START 메시지가 서버로 전송되었습니다.");
-        }
     }
 
     public void sendCollisionMessage() {
