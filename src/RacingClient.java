@@ -3,6 +3,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 
 public class RacingClient extends JFrame {
@@ -21,6 +23,10 @@ public class RacingClient extends JFrame {
 
     private String serverAddress = "localhost";
     private int serverPort = 54321;
+
+    private boolean isRunning = true; // 게임 실행 여부
+    private int carX = 180, carY = 500; // 자동차 위치
+    private List<Obstacle> obstacles = new ArrayList<>(); // 장애물 리스트
 
     public RacingClient() {
         super("Racing Game Client");
@@ -82,50 +88,25 @@ public class RacingClient extends JFrame {
         b_connect.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                serverAddress = t_hostAddr.getText();
-                serverPort = Integer.parseInt(t_portNum.getText());
-                playerName = t_nameField.getText().trim();
-
-                if (playerName.isEmpty()) {
-                    showError("플레이어 이름을 입력하세요.");
-                    return;
-                }
-
                 try {
                     connectToServer();
+                    playerName = t_nameField.getText();
                     sendPlayerName();
                 } catch (IOException ex) {
-                    printDisplay("서버 연결 오류: " + ex.getMessage());
-                    return;
+                    showError("서버 연결 실패: " + ex.getMessage());
                 }
-
-                b_connect.setEnabled(false);
-                b_disconnect.setEnabled(true);
-                b_exit.setEnabled(false);
-
-                t_nameField.setEditable(false);
-                t_hostAddr.setEditable(false);
-                t_portNum.setEditable(false);
             }
         });
 
-        b_disconnect = new JButton("접속 끊기");
+        b_disconnect = new JButton("연결 끊기");
         b_disconnect.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 disconnect();
-
-                b_connect.setEnabled(true);
-                b_disconnect.setEnabled(false);
-                b_exit.setEnabled(true);
-
-                t_nameField.setEditable(true);
-                t_hostAddr.setEditable(true);
-                t_portNum.setEditable(true);
             }
         });
 
-        b_exit = new JButton("종료하기");
+        b_exit = new JButton("종료");
         b_exit.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -136,8 +117,6 @@ public class RacingClient extends JFrame {
         p.add(b_connect);
         p.add(b_disconnect);
         p.add(b_exit);
-
-        b_disconnect.setEnabled(false);
 
         return p;
     }
@@ -152,7 +131,12 @@ public class RacingClient extends JFrame {
     }
 
     private void sendPlayerName() {
-        out.println(playerName); // 서버에 이름 전송
+        if (playerName != null && !playerName.isEmpty()) {
+            out.println(playerName);
+            printDisplay("Player name sent: " + playerName);
+        } else {
+            printDisplay("Player name is empty!");
+        }
     }
 
     private void disconnect() {
@@ -175,14 +159,50 @@ public class RacingClient extends JFrame {
         t_display.setCaretPosition(t_display.getDocument().getLength());
     }
 
+    public class Obstacle {
+        public int x, y; // 장애물의 위치
+        public Image image; // 장애물의 이미지
+
+        public Obstacle(int x, int y, Image image) {
+            this.x = x;
+            this.y = y;
+            this.image = image;
+        }
+
+        public Rectangle getBounds() {
+            return new Rectangle(x, y, 40, 40); // 장애물의 크기를 Rectangle로 반환
+        }
+    }
+
     private void setupGameUI(String carImageName) {
         JFrame gameFrame = new JFrame("Racing Game - " + playerName);
+
+        // GamePanel 객체 생성
         gamePanel = new GamePanel(out, carImageName);
+
+        // GamePanel 추가
         gameFrame.add(gamePanel);
         gameFrame.setSize(400, 600);
         gameFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         gameFrame.setVisible(true);
+
+        // 게임 시작
+        gamePanel.startGame();
+
+        // 서버에 START 메시지 전송
+        if (out != null) {
+            out.println("START");
+            printDisplay("START 메시지가 서버로 전송되었습니다.");
+        }
     }
+
+    public void sendCollisionMessage() {
+        if (out != null) {
+            out.println("COLLISION");
+            printDisplay("COLLISION 메시지가 서버로 전송되었습니다.");
+        }
+    }
+
 
     class ServerListener implements Runnable {
         @Override
@@ -200,7 +220,7 @@ public class RacingClient extends JFrame {
                         while (!(message = in.readLine()).isEmpty()) {
                             resultMessage.append(message).append("\n");
                         }
-                        gamePanel.displayWinner(resultMessage.toString());
+                        JOptionPane.showMessageDialog(null, resultMessage.toString(), "게임 결과", JOptionPane.INFORMATION_MESSAGE);
                     } else {
                         gamePanel.displayMessage(message);
                     }

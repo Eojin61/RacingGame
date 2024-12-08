@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.AbstractMap;
 
 public class RacingServer extends JFrame {
     private int port;
@@ -151,11 +152,13 @@ public class RacingServer extends JFrame {
     public synchronized void recordStartTime(Socket socket) {
         startTimes.put(socket, System.currentTimeMillis());
         printDisplay("Game started for: " + playerNames.get(socket));
+        printDisplay("Current startTimes: " + startTimes);
     }
 
     public synchronized void recordEndTime(Socket socket) {
         endTimes.put(socket, System.currentTimeMillis());
         printDisplay("Game ended for: " + playerNames.get(socket));
+        printDisplay("Current endTimes: " + endTimes);
 
         if (endTimes.size() == PLAYER_COUNT) {
             calculateResults(); // 결과 계산
@@ -164,30 +167,52 @@ public class RacingServer extends JFrame {
 
     private void calculateResults() {
         String winner = null;
-        long longestTime = 0;
-
         StringBuilder results = new StringBuilder();
         results.append("*** 게임 결과 ***\n");
 
-        for (Socket socket : startTimes.keySet()) {
-            long playTime = endTimes.get(socket) - startTimes.get(socket);
-            results.append(playerNames.get(socket))
-                    .append(" 플레이 시간: ")
-                    .append(playTime / 1000.0)
-                    .append("초\n");
+        // 플레이어 데이터를 저장할 리스트
+        List<Map.Entry<Socket, Long>> playerData = new ArrayList<>();
 
-            if (playTime > longestTime) {
-                longestTime = playTime;
-                winner = playerNames.get(socket);
+        // 데이터를 수집
+        for (Socket socket : startTimes.keySet()) {
+            if (endTimes.containsKey(socket)) {
+                long playTime = endTimes.get(socket) - startTimes.get(socket);
+                playerData.add(new AbstractMap.SimpleEntry<>(socket, playTime));
             }
         }
 
-        results.append("승리자: ").append(winner).append("\n");
+        // 플레이 시간을 기준으로 정렬
+        playerData.sort(Map.Entry.comparingByValue());
 
+        // 순위 및 결과 출력
+        int rank = 1;
+        for (Map.Entry<Socket, Long> entry : playerData) {
+            String playerName = playerNames.get(entry.getKey());
+            long playTime = entry.getValue();
+            results.append(rank).append("등: ").append(playerName)
+                    .append(" - 플레이 시간: ").append(playTime / 1000.0).append("초\n");
+
+            if (rank == 1) {
+                winner = playerName;
+            }
+            rank++;
+        }
+
+        // 승리자 출력
+        if (winner != null) {
+            results.append("\n승리자: ").append(winner).append("\n");
+        } else {
+            results.append("\n승리자를 결정할 수 없습니다.\n");
+        }
+
+        // 결과 전송 및 출력
         String finalResults = results.toString();
         broadcast(finalResults);
         printDisplay(finalResults);
     }
+
+
+
 
     class ClientHandler implements Runnable {
         private Socket socket;
@@ -245,6 +270,8 @@ public class RacingServer extends JFrame {
             out.println(msg);
         }
     }
+
+
 
     public static void main(String[] args) {
         int port = 54321;
