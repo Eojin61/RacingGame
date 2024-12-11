@@ -181,8 +181,9 @@ public class RacingServer extends JFrame {
             }
         }
 
-        // 플레이 시간을 기준으로 정렬
-        playerData.sort(Map.Entry.comparingByValue());
+        // 플레이 시간을 기준으로 정렬 (긴 시간이 1등이 되도록 역순 정렬)
+        playerData.sort((entry1, entry2) -> Long.compare(entry2.getValue(), entry1.getValue()));
+
 
         // 순위 및 결과 출력
         int rank = 1;
