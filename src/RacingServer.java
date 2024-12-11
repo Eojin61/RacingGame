@@ -117,25 +117,35 @@ public class RacingServer extends JFrame {
     }
 
     public void startServer() {
-        Socket clientSocket = null;
-
         try {
+            // 모든 네트워크 인터페이스에서 연결을 수락하려면 InetAddress.getByName("0.0.0.0") 또는 생략.
             serverSocket = new ServerSocket(port);
-            printDisplay("서버가 시작되었습니다. 플레이어의 접속을 기다리고 있습니다.");
 
-            while (clients.size() < PLAYER_COUNT) {
+            printDisplay("서버가 시작되었습니다. 포트: " + port);
+            printDisplay("플레이어의 접속을 기다리고 있습니다...");
+
+            while (true) { // 무제한으로 클라이언트 연결을 수락
                 Socket socket = serverSocket.accept();
+                printDisplay("새 클라이언트 접속: " + socket.getInetAddress().getHostAddress());
+
+                // 클라이언트 핸들러 생성 및 추가
                 ClientHandler clientHandler = new ClientHandler(socket, this, clients.size() + 1);
                 clients.add(clientHandler);
                 new Thread(clientHandler).start();
-                printDisplay("현재 접속한 플레이어 수 = " + clients.size());
-            }
 
-            printDisplay("모든 플레이어가 접속하였습니다. 게임이 시작되길 기다립니다.");
+                printDisplay("현재 접속한 플레이어 수: " + clients.size());
+
+                // 모든 플레이어가 접속했을 경우 메시지를 출력
+                if (clients.size() == PLAYER_COUNT) {
+                    printDisplay("모든 플레이어가 접속하였습니다. 게임이 시작되길 기다립니다.");
+                    break; // 필요한 경우 무한 루프를 종료
+                }
+            }
         } catch (IOException e) {
             printDisplay("오류: " + e.getMessage());
         }
     }
+
 
     public synchronized void printDisplay(String msg) {
         t_display.append(msg + "\n");
@@ -234,9 +244,11 @@ public class RacingServer extends JFrame {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
 
+                // 클라이언트에게 자동차 이미지 전송
                 String carImage = (clientNumber == 1) ? "Player1.png" : "Player2.png";
                 out.println("CAR_IMAGE:" + carImage);
 
+                // 플레이어 이름 수신
                 String playerName = in.readLine();
                 server.playerNames.put(socket, playerName);
                 server.printDisplay("Player name received: " + playerName);
@@ -244,12 +256,19 @@ public class RacingServer extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.startsWith("START")) {
+                        // 게임 시작 기록
                         server.recordStartTime(socket);
                         server.broadcast(playerName + " has started the game!");
                     } else if (message.startsWith("COLLISION")) {
+                        // 충돌 상태 브로드캐스트
                         server.recordEndTime(socket);
                         server.broadcast(playerName + " collided with an obstacle!");
+                    } else if (message.startsWith("RESULT:")) {
+                        // 결과 데이터 브로드캐스트
+                        String result = message.split(":")[1];
+                        server.broadcast("RESULT:" + playerName + ":" + result);
                     } else if (message.startsWith("POS:")) {
+                        // 위치 정보 브로드캐스트
                         server.broadcast(message);
                     }
                 }
@@ -271,6 +290,7 @@ public class RacingServer extends JFrame {
             out.println(msg);
         }
     }
+
 
 
 

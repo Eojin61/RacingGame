@@ -21,7 +21,7 @@ public class RacingClient extends JFrame {
     private GamePanel gamePanel;
     private String playerName;
 
-    private String serverAddress = "localhost";
+    private String serverAddress = "172.20.10.4"; // 서버 컴퓨터의 IP 주소
     private int serverPort = 54321;
 
     private boolean isRunning = true; // 게임 실행 여부
@@ -213,6 +213,15 @@ public class RacingClient extends JFrame {
                             resultMessage.append(message).append("\n");
                         }
                         JOptionPane.showMessageDialog(null, resultMessage.toString(), "게임 결과", JOptionPane.INFORMATION_MESSAGE);
+                    } else if (message.startsWith("COLLISION")) {
+                        // 충돌 메시지 처리
+                        gamePanel.displayMessage(message);
+                    } else if (message.startsWith("RESULT:")) {
+                        // 결과 메시지 처리
+                        String[] data = message.split(":");
+                        String playerName = data[1];
+                        String result = data[2];
+                        gamePanel.displayMessage(playerName + "의 결과: " + result);
                     } else {
                         gamePanel.displayMessage(message);
                     }
@@ -222,6 +231,7 @@ public class RacingClient extends JFrame {
             }
         }
     }
+
 
     public static void main(String[] args) {
         new RacingClient();
