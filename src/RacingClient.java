@@ -21,7 +21,7 @@ public class RacingClient extends JFrame {
     private GamePanel gamePanel;
     private String playerName;
 
-    private String serverAddress = "172.20.10.4"; // 서버 컴퓨터의 IP 주소
+    private String serverAddress = "localhost"; // 서버 컴퓨터의 IP 주소
     private int serverPort = 54321;
 
     private boolean isRunning = true; // 게임 실행 여부
@@ -89,7 +89,31 @@ public class RacingClient extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
+                    // 서버 주소를 GUI 입력 필드에서 가져오기
+                    serverAddress = t_hostAddr.getText();
+
+                    // 서버에 연결
                     connectToServer();
+
+                    // 플레이어 이름 전송
+                    playerName = t_nameField.getText();
+                    sendPlayerName();
+                } catch (IOException ex) {
+                    showError("서버 연결 실패: " + ex.getMessage());
+                }
+            }
+        });b_connect = new JButton("접속하기");
+        b_connect.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    // 서버 주소를 GUI 입력 필드에서 가져오기
+                    serverAddress = t_hostAddr.getText();
+
+                    // 서버에 연결
+                    connectToServer();
+
+                    // 플레이어 이름 전송
                     playerName = t_nameField.getText();
                     sendPlayerName();
                 } catch (IOException ex) {
