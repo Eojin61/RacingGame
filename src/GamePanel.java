@@ -127,10 +127,6 @@ public class GamePanel extends JPanel {
             g.fillRect(0, 0, 400, 600);
         }
 
-        // 중앙선 그리기
-        g.setColor(Color.YELLOW);
-        g.fillRect(190, 0, 10, 600);
-
         // 자동차 그리기
         g.drawImage(carImage, carX, carY, 40, 60, this);
 
