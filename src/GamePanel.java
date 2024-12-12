@@ -121,7 +121,7 @@ public class GamePanel extends JPanel {
             roadImage = new ImageIcon(getClass().getResource("/image/road.png")).getImage();
 
             // 고정된 장애물 이미지 로드
-            obstacleImage = new ImageIcon(getClass().getResource("/image/obstacle1.png")).getImage();
+            obstacleImage = new ImageIcon(getClass().getResource("/obstacle1.png")).getImage();
         } catch (Exception e) {
             System.err.println("이미지를 로드할 수 없습니다: " + e.getMessage());
         }
@@ -132,7 +132,6 @@ public class GamePanel extends JPanel {
         for (int i = 0; i < 5; i++) {
             int x = (int) (Math.random() * 300) + 50;
             int y = (int) (Math.random() * -600);
-            obstacles.add(new Obstacle(x, y, obstacleImage));
         }
     }
 
@@ -171,8 +170,8 @@ public class GamePanel extends JPanel {
 
         // 장애물 이미지 그리기
         for (Obstacle obstacle : obstacles) {
-            if (obstacle.image != null) {
-                g.drawImage(obstacle.image, obstacle.x, obstacle.y, 40, 40, this);
+            if (obstacleImage != null) {
+                g.drawImage(obstacleImage, obstacle.x, obstacle.y, 40, 40, this);
             } else {
                 // 이미지가 없는 경우 기본 사각형으로 표시
                 g.setColor(Color.RED);
@@ -193,9 +192,5 @@ public class GamePanel extends JPanel {
     public void startGame() {
         isRunning = true;
         this.requestFocusInWindow();
-    }
-
-    public void displayWinner(String resultMessage) {
-        JOptionPane.showMessageDialog(this, resultMessage, "게임 결과", JOptionPane.INFORMATION_MESSAGE);
     }
 }

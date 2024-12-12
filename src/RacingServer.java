@@ -240,15 +240,12 @@ public class RacingServer extends JFrame {
     }
 
     public synchronized void recordEndTime(Socket socket) {
-        endTimes.put(socket, System.currentTimeMillis()); // 종료 시간 기록
-
-        // 모든 플레이어가 종료했는지 확인
+        endTimes.put(socket, System.currentTimeMillis());
         if (endTimes.size() == PLAYER_COUNT) {
-            calculateResults(); // 결과 계산 및 클라이언트로 전송
+            calculateResults();
             isGameRunning = false; // 게임 종료
         }
     }
-
 
     public void sendMessageToClient(Socket socket, String message) {
         for (ClientHandler client : clients) {
