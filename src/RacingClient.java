@@ -1,11 +1,14 @@
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.*;
 
 public class RacingClient extends JFrame {
 
@@ -23,10 +26,6 @@ public class RacingClient extends JFrame {
 
     private String serverAddress = "localhost"; // 서버 컴퓨터의 IP 주소
     private int serverPort = 54321;
-
-    private boolean isRunning = true; // 게임 실행 여부
-    private int carX = 180, carY = 500; // 자동차 위치
-    private List<Obstacle> obstacles = new ArrayList<>(); // 장애물 리스트
 
     public RacingClient() {
         super("Racing Game Client");
@@ -183,21 +182,6 @@ public class RacingClient extends JFrame {
         t_display.setCaretPosition(t_display.getDocument().getLength());
     }
 
-    public class Obstacle {
-        public int x, y; // 장애물의 위치
-        public Image image; // 장애물의 이미지
-
-        public Obstacle(int x, int y, Image image) {
-            this.x = x;
-            this.y = y;
-            this.image = image;
-        }
-
-        public Rectangle getBounds() {
-            return new Rectangle(x, y, 40, 40); // 장애물의 크기를 Rectangle로 반환
-        }
-    }
-
     private void setupGameUI(String carImageName) {
         JFrame gameFrame = new JFrame("Racing Game - " + playerName);
 
@@ -227,16 +211,35 @@ public class RacingClient extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.startsWith("CAR_IMAGE:")) {
+                        // 자신의 자동차 이미지 처리
                         carImageName = message.split(":")[1];
                         setupGameUI(carImageName);
+                    } else if (message.startsWith("OPPONENT_CAR:")) {
+                        // 상대방 자동차 이미지 처리
+                        String opponentCarImageName = message.split(":")[1];
+                        gamePanel.setOpponentCarImage(opponentCarImageName); // 상대방 이미지 설정
                     } else if (message.startsWith("START_GAME")) {
+                        // 게임 시작 신호 처리
                         gamePanel.startGame();
-                    } else if (message.startsWith("*** 게임 결과 ***")) {
-                        StringBuilder resultMessage = new StringBuilder(message).append("\n");
-                        while (!(message = in.readLine()).isEmpty()) {
-                            resultMessage.append(message).append("\n");
+                    } else if (message.startsWith("POS:")) {
+                        // 상대방 자동차 위치 업데이트
+                        String[] position = message.substring(4).split(",");
+                        int x = Integer.parseInt(position[0]);
+                        int y = Integer.parseInt(position[1]);
+                        gamePanel.updateOpponentPosition(x, y);
+                    } else if (message.startsWith("OBSTACLES:")) {
+                        // 장애물 데이터 수신 및 업데이트
+                        String[] obstacleData = message.substring(10).split(";");
+                        List<Obstacle> receivedObstacles = new ArrayList<>();
+                        for (String data : obstacleData) {
+                            if (!data.isEmpty()) {
+                                String[] position = data.split(",");
+                                int x = Integer.parseInt(position[0]);
+                                int y = Integer.parseInt(position[1]);
+                                receivedObstacles.add(new Obstacle(x, y));
+                            }
                         }
-                        JOptionPane.showMessageDialog(null, resultMessage.toString(), "게임 결과", JOptionPane.INFORMATION_MESSAGE);
+                        gamePanel.updateObstacles(receivedObstacles);
                     } else if (message.startsWith("COLLISION")) {
                         // 충돌 메시지 처리
                         gamePanel.displayMessage(message);
@@ -246,7 +249,18 @@ public class RacingClient extends JFrame {
                         String playerName = data[1];
                         String result = data[2];
                         gamePanel.displayMessage(playerName + "의 결과: " + result);
+                    } else if (message.startsWith("*** 게임 결과 ***")) {
+                        // 게임 결과 처리
+                        StringBuilder resultMessage = new StringBuilder(message).append("\n");
+                        while (!(message = in.readLine()).isEmpty()) {
+                            resultMessage.append(message).append("\n");
+                        }
+                        JOptionPane.showMessageDialog(null, resultMessage.toString(), "게임 결과", JOptionPane.INFORMATION_MESSAGE);
+                    } else if (message.startsWith("ERROR:")) {
+                        // 오류 메시지 처리
+                        JOptionPane.showMessageDialog(null, message.substring(6), "오류", JOptionPane.ERROR_MESSAGE);
                     } else {
+                        // 기타 메시지 처리
                         gamePanel.displayMessage(message);
                     }
                 }
@@ -255,7 +269,6 @@ public class RacingClient extends JFrame {
             }
         }
     }
-
 
     public static void main(String[] args) {
         new RacingClient();
