@@ -233,13 +233,14 @@ public class RacingClient extends JFrame {
                         List<Obstacle> receivedObstacles = new ArrayList<>();
                         for (String data : obstacleData) {
                             if (!data.isEmpty()) {
-                                String[] position = data.split(",");
-                                int x = Integer.parseInt(position[0]);
-                                int y = Integer.parseInt(position[1]);
-                                receivedObstacles.add(new Obstacle(x, y));
+                                String[] parts = data.split(",");
+                                int x = Integer.parseInt(parts[0]);       // x 좌표
+                                int y = Integer.parseInt(parts[1]);       // y 좌표
+                                String imageName = parts[2];              // 이미지 이름
+                                receivedObstacles.add(new Obstacle(x, y, imageName)); // 이미지 이름 포함한 장애물 생성
                             }
                         }
-                        gamePanel.updateObstacles(receivedObstacles);
+                        gamePanel.updateObstacles(receivedObstacles); // 장애물 정보 업데이트
                     } else if (message.startsWith("COLLISION")) {
                         // 충돌 메시지 처리
                         gamePanel.displayMessage(message);

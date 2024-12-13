@@ -32,7 +32,7 @@ public class GamePanel extends JPanel {
 
         loadImages(); // 자동차 및 도로 이미지 로드
 
-        timer = new Timer(100, new ActionListener() { // 장애물 업데이트 주기: 100ms
+        timer = new Timer(50, new ActionListener() { // 장애물 업데이트 주기: 100ms
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (!isRunning) return;
@@ -170,13 +170,9 @@ public class GamePanel extends JPanel {
 
         // 장애물 이미지 그리기
         for (Obstacle obstacle : obstacles) {
-            if (obstacleImage != null) {
-                g.drawImage(obstacleImage, obstacle.x, obstacle.y, 40, 40, this);
-            } else {
-                // 이미지가 없는 경우 기본 사각형으로 표시
-                g.setColor(Color.RED);
-                g.fillRect(obstacle.x, obstacle.y, 40, 40);
-            }
+            // 이미지 이름에 따라 이미지 로드
+            Image img = new ImageIcon(getClass().getResource("/image/" + obstacle.imageName)).getImage();
+            g.drawImage(img, obstacle.x, obstacle.y, 40, 40, this);
         }
 
         // 메시지 출력

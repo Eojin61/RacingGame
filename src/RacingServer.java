@@ -26,6 +26,7 @@ public class RacingServer extends JFrame {
 
     private JTextArea t_display;
     private JButton b_connect, b_disconnect, b_exit;
+    private final String[] OBSTACLE_IMAGES = {"obstacle1.png", "obstacle2.png"}; // 장애물 이미지 배열
 
     // 장애물 관련 필드
     private List<Obstacle> obstacles = new ArrayList<>(); // 장애물 리스트
@@ -182,7 +183,8 @@ public class RacingServer extends JFrame {
         for (int i = 0; i < OBSTACLE_COUNT; i++) {
             int x = random.nextInt(300) + 50;   // x 좌표: 50 ~ 349
             int y = -random.nextInt(600);       // y 좌표: -600 ~ -1
-            obstacles.add(new Obstacle(x, y)); // 장애물 추가
+            String imageName = OBSTACLE_IMAGES[random.nextInt(OBSTACLE_IMAGES.length)]; // 랜덤 이미지 선택
+            obstacles.add(new Obstacle(x, y, imageName)); // 장애물 추가
         }
     }
 
@@ -190,19 +192,29 @@ public class RacingServer extends JFrame {
     private void broadcastObstacles() {
         StringBuilder obstacleMessage = new StringBuilder("OBSTACLES:");
         for (Obstacle obstacle : obstacles) {
-            obstacleMessage.append(obstacle.x).append(",").append(obstacle.y).append(";");
+            // 장애물 데이터를 x, y, imageName 형식으로 추가
+            obstacleMessage.append(obstacle.x)
+                    .append(",")
+                    .append(obstacle.y)
+                    .append(",")
+                    .append(obstacle.imageName)
+                    .append(";");
         }
-        broadcast(obstacleMessage.toString());
+        broadcast(obstacleMessage.toString()); // 브로드캐스트 메시지 전송
         // 브로드캐스트 데이터 로그 출력
         System.out.println("Broadcasted Obstacles: " + obstacleMessage);
     }
 
+    // 장애물 업데이트
     private void updateObstacles() {
+        Random random = new Random();
         for (Obstacle obstacle : obstacles) {
             obstacle.y += 10; // 장애물을 아래로 이동
             if (obstacle.y > 600) {
-                obstacle.y = -(new Random().nextInt(600)); // 새로운 y 좌표 (음수 값)
-                obstacle.x = new Random().nextInt(300) + 50; // 새로운 x 좌표 (50 ~ 349)
+                // 장애물이 화면 아래로 나가면 새로운 위치와 이미지 할당
+                obstacle.y = -random.nextInt(600); // 새로운 y 좌표 (음수 값)
+                obstacle.x = random.nextInt(300) + 50; // 새로운 x 좌표 (50 ~ 349)
+                obstacle.imageName = OBSTACLE_IMAGES[random.nextInt(OBSTACLE_IMAGES.length)]; // 새로운 이미지
             }
         }
         broadcastObstacles(); // 업데이트된 장애물 상태를 클라이언트로 전송
