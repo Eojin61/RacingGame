@@ -88,13 +88,10 @@ public class RacingClient extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    // 서버 주소를 GUI 입력 필드에서 가져오기
                     serverAddress = t_hostAddr.getText();
 
-                    // 서버에 연결
                     connectToServer();
 
-                    // 플레이어 이름 전송
                     playerName = t_nameField.getText();
                     sendPlayerName();
                 } catch (IOException ex) {
@@ -106,13 +103,10 @@ public class RacingClient extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    // 서버 주소를 GUI 입력 필드에서 가져오기
                     serverAddress = t_hostAddr.getText();
 
-                    // 서버에 연결
                     connectToServer();
 
-                    // 플레이어 이름 전송
                     playerName = t_nameField.getText();
                     sendPlayerName();
                 } catch (IOException ex) {
@@ -185,24 +179,13 @@ public class RacingClient extends JFrame {
     private void setupGameUI(String carImageName) {
         JFrame gameFrame = new JFrame("Racing Game - " + playerName);
 
-        // GamePanel 객체 생성
         gamePanel = new GamePanel(out, carImageName);
 
-        // GamePanel 추가
         gameFrame.add(gamePanel);
         gameFrame.setSize(400, 600);
         gameFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         gameFrame.setVisible(true);
-
     }
-
-    public void sendCollisionMessage() {
-        if (out != null) {
-            out.println("COLLISION");
-            printDisplay("COLLISION 메시지가 서버로 전송되었습니다.");
-        }
-    }
-
 
     class ServerListener implements Runnable {
         @Override
@@ -211,24 +194,19 @@ public class RacingClient extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.startsWith("CAR_IMAGE:")) {
-                        // 자신의 자동차 이미지 처리
                         carImageName = message.split(":")[1];
                         setupGameUI(carImageName);
                     } else if (message.startsWith("OPPONENT_CAR:")) {
-                        // 상대방 자동차 이미지 처리
                         String opponentCarImageName = message.split(":")[1];
                         gamePanel.setOpponentCarImage(opponentCarImageName); // 상대방 이미지 설정
                     } else if (message.startsWith("START_GAME")) {
-                        // 게임 시작 신호 처리
                         gamePanel.startGame();
                     } else if (message.startsWith("POS:")) {
-                        // 상대방 자동차 위치 업데이트
                         String[] position = message.substring(4).split(",");
                         int x = Integer.parseInt(position[0]);
                         int y = Integer.parseInt(position[1]);
                         gamePanel.updateOpponentPosition(x, y);
                     } else if (message.startsWith("OBSTACLES:")) {
-                        // 장애물 데이터 수신 및 업데이트
                         String[] obstacleData = message.substring(10).split(";");
                         List<Obstacle> receivedObstacles = new ArrayList<>();
                         for (String data : obstacleData) {
@@ -242,26 +220,21 @@ public class RacingClient extends JFrame {
                         }
                         gamePanel.updateObstacles(receivedObstacles); // 장애물 정보 업데이트
                     } else if (message.startsWith("COLLISION")) {
-                        // 충돌 메시지 처리
                         gamePanel.displayMessage(message);
                     } else if (message.startsWith("RESULT:")) {
-                        // 결과 메시지 처리
                         String[] data = message.split(":");
                         String playerName = data[1];
                         String result = data[2];
                         gamePanel.displayMessage(playerName + "의 결과: " + result);
                     } else if (message.startsWith("*** 게임 결과 ***")) {
-                        // 게임 결과 처리
                         StringBuilder resultMessage = new StringBuilder(message).append("\n");
                         while (!(message = in.readLine()).isEmpty()) {
                             resultMessage.append(message).append("\n");
                         }
                         JOptionPane.showMessageDialog(null, resultMessage.toString(), "게임 결과", JOptionPane.INFORMATION_MESSAGE);
                     } else if (message.startsWith("ERROR:")) {
-                        // 오류 메시지 처리
                         JOptionPane.showMessageDialog(null, message.substring(6), "오류", JOptionPane.ERROR_MESSAGE);
                     } else {
-                        // 기타 메시지 처리
                         gamePanel.displayMessage(message);
                     }
                 }

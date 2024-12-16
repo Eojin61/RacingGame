@@ -21,18 +21,17 @@ public class GamePanel extends JPanel {
     private Image carImage; // 자신의 자동차 이미지
     private Image opponentCarImage; // 상대방 자동차 이미지
     private Image roadImage; // 도로 이미지
-    private Image obstacleImage; // 고정된 장애물 이미지
 
     private String message = "";
 
     public GamePanel(PrintWriter out, String carImageName) {
         this.out = out;
-        this.setDoubleBuffered(true); // 더블 버퍼링 활성화
+        this.setDoubleBuffered(true);
         this.setFocusable(true);
 
-        loadImages(); // 자동차 및 도로 이미지 로드
+        loadImages();
 
-        timer = new Timer(50, new ActionListener() { // 장애물 업데이트 주기: 100ms
+        timer = new Timer(50, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (!isRunning) return;
@@ -45,7 +44,6 @@ public class GamePanel extends JPanel {
                     }
                 }
 
-                // 위치 정보 전송
                 out.println("POS:" + carX + "," + carY);
 
                 for (Obstacle obstacle : obstacles) {
@@ -57,7 +55,7 @@ public class GamePanel extends JPanel {
                         break;
                     }
                 }
-                repaint(); // 화면 갱신
+                repaint();
             }
         });
 
@@ -79,7 +77,6 @@ public class GamePanel extends JPanel {
         this.setLayout(new BorderLayout());
         this.add(startButton, BorderLayout.SOUTH);
 
-        // 키 입력 리스너 추가
         this.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -96,12 +93,11 @@ public class GamePanel extends JPanel {
 
     public synchronized void updateObstacles(List<Obstacle> newObstacles) {
         this.obstacles.clear();
-        this.obstacles.addAll(newObstacles); // 서버에서 받은 장애물 업데이트
+        this.obstacles.addAll(newObstacles);
         repaint();
     }
 
     public void setOpponentCarImage(String opponentCarImageName) {
-        // 상대방 자동차 이미지를 고정된 Player2.png로 설정
         try {
             opponentCarImage = new ImageIcon(getClass().getResource("/image/Player2.png")).getImage();
         } catch (Exception e) {
@@ -111,17 +107,11 @@ public class GamePanel extends JPanel {
 
     private void loadImages() {
         try {
-            // 자신의 자동차 이미지를 고정된 Player1.png로 설정
             carImage = new ImageIcon(getClass().getResource("/image/Player1.png")).getImage();
 
-            // 상대방 자동차 이미지는 기본적으로 Player2.png로 설정
             opponentCarImage = new ImageIcon(getClass().getResource("/image/Player2.png")).getImage();
 
-            // 도로 이미지 로드
             roadImage = new ImageIcon(getClass().getResource("/image/road.png")).getImage();
-
-            // 고정된 장애물 이미지 로드
-            obstacleImage = new ImageIcon(getClass().getResource("/obstacle1.png")).getImage();
         } catch (Exception e) {
             System.err.println("이미지를 로드할 수 없습니다: " + e.getMessage());
         }
@@ -140,42 +130,34 @@ public class GamePanel extends JPanel {
     public void updateOpponentPosition(int x, int y) {
         this.opponentX = x;
         this.opponentY = y;
-        repaint(); // 화면 다시 그리기
+        repaint();
     }
 
     @Override
     protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 도로 이미지 그리기
         if (roadImage != null) {
             g.drawImage(roadImage, 0, 0, getWidth(), getHeight(), this);
         } else {
-            // 기본 배경색으로 도로를 채우기
             g.setColor(Color.GRAY);
             g.fillRect(0, 0, 400, 600);
         }
 
-        // 자동차 그리기
         g.drawImage(carImage, carX, carY, 40, 60, this);
 
-        // 상대방 자동차 그리기 (이미지로 표시)
         if (opponentCarImage != null) {
             g.drawImage(opponentCarImage, opponentX, opponentY, 40, 60, this);
         } else {
-            // 상대방 자동차 이미지가 없는 경우 기본 빨간색 사각형으로 표시
             g.setColor(Color.RED);
             g.fillRect(opponentX, opponentY, 40, 60);
         }
 
-        // 장애물 이미지 그리기
         for (Obstacle obstacle : obstacles) {
-            // 이미지 이름에 따라 이미지 로드
             Image img = new ImageIcon(getClass().getResource("/image/" + obstacle.imageName)).getImage();
             g.drawImage(img, obstacle.x, obstacle.y, 40, 40, this);
         }
 
-        // 메시지 출력
         g.setColor(Color.WHITE);
         g.drawString(message, 10, 20);
     }

@@ -5,17 +5,6 @@ public class Obstacle {
     public Image image;
     public String imageName; // 이미지 파일 이름
 
-    public Obstacle(int x, int y, Image image) {
-        this.x = x;
-        this.y = y;
-        this.image = image;
-    }
-
-    public Obstacle(int x, int y) {
-        this.x = x;
-        this.y = y;
-    }
-
     public Obstacle(int x, int y, String imageName) {
         this.x = x;
         this.y = y;

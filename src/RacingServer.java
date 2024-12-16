@@ -22,13 +22,11 @@ public class RacingServer extends JFrame {
     private Map<Socket, String> playerNames = new HashMap<>();
     private Map<Socket, Long> startTimes = new HashMap<>();
     private Map<Socket, Long> endTimes = new HashMap<>();
-    private JTextArea serverLog;
 
     private JTextArea t_display;
     private JButton b_connect, b_disconnect, b_exit;
-    private final String[] OBSTACLE_IMAGES = {"obstacle1.png", "obstacle2.png"}; // 장애물 이미지 배열
+    private final String[] OBSTACLE_IMAGES = {"obstacle1.png", "obstacle2.png"};
 
-    // 장애물 관련 필드
     private List<Obstacle> obstacles = new ArrayList<>(); // 장애물 리스트
     private final int OBSTACLE_COUNT = 5;
 
@@ -132,21 +130,19 @@ public class RacingServer extends JFrame {
             printDisplay("서버가 시작되었습니다. 포트: " + port);
             printDisplay("플레이어의 접속을 기다리고 있습니다...");
 
-            while (true) { // 무제한으로 클라이언트 연결을 수락
+            while (true) {
                 Socket socket = serverSocket.accept();
                 printDisplay("새 클라이언트 접속: " + socket.getInetAddress().getHostAddress());
 
-                // 클라이언트 핸들러 생성 및 추가
                 ClientHandler clientHandler = new ClientHandler(socket, this, clients.size() + 1);
                 clients.add(clientHandler);
                 new Thread(clientHandler).start();
 
                 printDisplay("현재 접속한 플레이어 수: " + clients.size());
 
-                // 모든 플레이어가 접속했을 경우 메시지를 출력
                 if (clients.size() == PLAYER_COUNT) {
                     printDisplay("모든 플레이어가 접속하였습니다. 게임이 시작되길 기다립니다.");
-                    break; // 필요한 경우 무한 루프를 종료
+                    break;
                 }
             }
         } catch (IOException e) {
@@ -175,24 +171,21 @@ public class RacingServer extends JFrame {
         }
     }
 
-    // 장애물 생성
     private void generateObstacles() {
         obstacles.clear();
         Random random = new Random();
 
         for (int i = 0; i < OBSTACLE_COUNT; i++) {
-            int x = random.nextInt(300) + 50;   // x 좌표: 50 ~ 349
-            int y = -random.nextInt(600);       // y 좌표: -600 ~ -1
-            String imageName = OBSTACLE_IMAGES[random.nextInt(OBSTACLE_IMAGES.length)]; // 랜덤 이미지 선택
-            obstacles.add(new Obstacle(x, y, imageName)); // 장애물 추가
+            int x = random.nextInt(300) + 50;
+            int y = -random.nextInt(600);
+            String imageName = OBSTACLE_IMAGES[random.nextInt(OBSTACLE_IMAGES.length)];
+            obstacles.add(new Obstacle(x, y, imageName));
         }
     }
 
-    // 장애물 상태를 클라이언트로 브로드캐스트
     private void broadcastObstacles() {
         StringBuilder obstacleMessage = new StringBuilder("OBSTACLES:");
         for (Obstacle obstacle : obstacles) {
-            // 장애물 데이터를 x, y, imageName 형식으로 추가
             obstacleMessage.append(obstacle.x)
                     .append(",")
                     .append(obstacle.y)
@@ -200,27 +193,23 @@ public class RacingServer extends JFrame {
                     .append(obstacle.imageName)
                     .append(";");
         }
-        broadcast(obstacleMessage.toString()); // 브로드캐스트 메시지 전송
-        // 브로드캐스트 데이터 로그 출력
+        broadcast(obstacleMessage.toString());
         System.out.println("Broadcasted Obstacles: " + obstacleMessage);
     }
 
-    // 장애물 업데이트
     private void updateObstacles() {
         Random random = new Random();
         for (Obstacle obstacle : obstacles) {
-            obstacle.y += 10; // 장애물을 아래로 이동
+            obstacle.y += 10;
             if (obstacle.y > 600) {
-                // 장애물이 화면 아래로 나가면 새로운 위치와 이미지 할당
-                obstacle.y = -random.nextInt(600); // 새로운 y 좌표 (음수 값)
-                obstacle.x = random.nextInt(300) + 50; // 새로운 x 좌표 (50 ~ 349)
-                obstacle.imageName = OBSTACLE_IMAGES[random.nextInt(OBSTACLE_IMAGES.length)]; // 새로운 이미지
+                obstacle.y = -random.nextInt(600);
+                obstacle.x = random.nextInt(300) + 50;
+                obstacle.imageName = OBSTACLE_IMAGES[random.nextInt(OBSTACLE_IMAGES.length)];
             }
         }
-        broadcastObstacles(); // 업데이트된 장애물 상태를 클라이언트로 전송
+        broadcastObstacles();
     }
 
-    // 게임 시작 시 장애물 초기화 및 동기화 시작
     public synchronized void startGame() {
         generateObstacles();
         broadcastObstacles();
@@ -228,7 +217,7 @@ public class RacingServer extends JFrame {
         new Thread(() -> {
             while (isGameRunning) {
                 try {
-                    Thread.sleep(50); // 장애물 업데이트 주기
+                    Thread.sleep(50);
                     updateObstacles();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -239,29 +228,28 @@ public class RacingServer extends JFrame {
 
     public synchronized void recordStartTime(Socket socket) {
         if (isGameRunning) {
-            sendMessageToClient(socket, "ERROR: 게임이 이미 진행 중입니다."); // 이미 게임 중인 경우
+            sendMessageToClient(socket, "ERROR: 게임이 이미 진행 중입니다.");
             return;
         }
-        isGameRunning = true; // 게임 시작
+        isGameRunning = true;
         startTimes.put(socket, System.currentTimeMillis());
 
-        startGame(); // 게임 시작 로직 호출
+        startGame();
 
-        broadcast("START_GAME"); // 모든 클라이언트에게 게임 시작 신호
+        broadcast("START_GAME");
         printDisplay(playerNames.get(socket) + " 게임 시작!");
     }
 
     public synchronized void recordEndTime(Socket socket) {
         if (!isGameRunning) {
-            return; // 게임이 이미 종료되었으면 아무 작업도 하지 않음
+            return;
         }
 
         endTimes.put(socket, System.currentTimeMillis());
 
-        // 모든 플레이어가 게임을 종료했는지 확인
         if (endTimes.size() == PLAYER_COUNT) {
-            isGameRunning = false; // 게임 종료
-            calculateResults(); // 결과 계산 및 출력
+            isGameRunning = false;
+            calculateResults();
         }
     }
 
@@ -279,10 +267,8 @@ public class RacingServer extends JFrame {
         StringBuilder results = new StringBuilder();
         results.append("*** 게임 결과 ***\n");
 
-        // 플레이어 데이터를 저장할 리스트
         List<Map.Entry<Socket, Long>> playerData = new ArrayList<>();
 
-        // 데이터를 수집
         for (Socket socket : startTimes.keySet()) {
             if (endTimes.containsKey(socket)) {
                 long playTime = endTimes.get(socket) - startTimes.get(socket);
@@ -290,11 +276,8 @@ public class RacingServer extends JFrame {
             }
         }
 
-        // 플레이 시간을 기준으로 정렬 (긴 시간이 1등이 되도록 역순 정렬)
         playerData.sort((entry1, entry2) -> Long.compare(entry2.getValue(), entry1.getValue()));
 
-
-        // 순위 및 결과 출력
         int rank = 1;
         for (Map.Entry<Socket, Long> entry : playerData) {
             String playerName = playerNames.get(entry.getKey());
@@ -308,14 +291,12 @@ public class RacingServer extends JFrame {
             rank++;
         }
 
-        // 승리자 출력
         if (winner != null) {
             results.append("\n승리자: ").append(winner).append("\n");
         } else {
             results.append("\n승리자를 결정할 수 없습니다.\n");
         }
 
-        // 결과 전송 및 출력
         String finalResults = results.toString();
         broadcast(finalResults);
         printDisplay(finalResults);
@@ -335,7 +316,7 @@ public class RacingServer extends JFrame {
         }
 
         public Socket getSocket() {
-            return socket; // 소켓 반환
+            return socket;
         }
 
         @Override
@@ -344,15 +325,12 @@ public class RacingServer extends JFrame {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
 
-                // 클라이언트에게 자동차 이미지 전송
                 String carImage = (clientNumber == 1) ? "Player1.png" : "Player2.png";
                 out.println("CAR_IMAGE:" + carImage);
 
-                // 상대방 자동차 이미지 브로드캐스트
                 String opponentCarImage = (clientNumber == 1) ? "Player2.png" : "Player1.png";
                 server.broadcastToOthers(socket, "OPPONENT_CAR:" + opponentCarImage);
 
-                // 플레이어 이름 수신
                 String playerName = in.readLine();
                 server.playerNames.put(socket, playerName);
                 server.printDisplay("Player name received: " + playerName);
@@ -360,19 +338,15 @@ public class RacingServer extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     if (message.startsWith("START")) {
-                        // 게임 시작 기록
                         server.recordStartTime(socket);
                         server.broadcast(playerName + " has started the game!");
                     } else if (message.startsWith("COLLISION")) {
-                        // 충돌 상태 브로드캐스트
                         server.recordEndTime(socket);
                         server.broadcast(playerName + " collided with an obstacle!");
                     } else if (message.startsWith("RESULT:")) {
-                        // 결과 데이터 브로드캐스트
                         String result = message.split(":")[1];
                         server.broadcast("RESULT:" + playerName + ":" + result);
                     } else if (message.startsWith("POS:")) {
-                        // 위치 정보 브로드캐스트 (송신 클라이언트를 제외한 나머지에게만)
                         server.broadcastToOthers(socket, message);
                     }
                 }
